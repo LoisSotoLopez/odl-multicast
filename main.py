@@ -37,8 +37,11 @@ def get_topo_view_xml(xml):
 			view_node_mac.text = str(libxml2.parseDoc(str(n)).xpathEval('/node/addresses/mac/text()')[0])
 
 		for l in links:
+			print(view_node_id.text)
+			print(str(libxml2.parseDoc(str(l)).xpathEval('/link/link-id/text()')[0]).split("/")[0])
+			print((str(libxml2.parseDoc(str(l)).xpathEval('/link/link-id/text()')[0]).split("/")[0]).find(view_node_id.text))
 			# Get first half of identifier (link source)
-			if str(libxml2.parseDoc(str(l)).xpathEval('/link/link-id/text()')[0]).split("/")[0] == view_node_id.text:
+			if (str(libxml2.parseDoc(str(l)).xpathEval('/link/link-id/text()')[0]).split("/")[0]).find(view_node_id.text) != -1:
 				link = etree.SubElement(view_node, "link")
 				link_id = etree.SubElement(link, "link-id")
 				link_id.text = str(libxml2.parseDoc(str(l)).xpathEval('/link/link-id/text()')[0])
