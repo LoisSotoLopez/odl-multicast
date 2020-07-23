@@ -10,12 +10,17 @@ def _print_tree(tree,n):
 
 # Converts controller xml to legible text 
 def _to_pretty_text(xml):
-	tree = etree.fromstring(xml)
-	for t in tree:
-		_print_tree(t,0)
-		print()
+	if xml != '':
+		tree = etree.fromstring(xml)
+		for t in tree:
+			_print_tree(t,0)
+			print()
 		
 def show_info(xml,mode):
+	if mode == "bad":
+		print("An error ocurred")
+	else:
+		print("Worked!")
 	_to_pretty_text(xml)
 
 
