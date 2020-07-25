@@ -20,7 +20,7 @@ def _clean_namespaces(xml):
 	xml = re.sub(' xmlns:a="[^"]+"', '', xml)
 	return xml
 
-def _get_topo_view_xml(xml):
+def _retrieve_topology(xml):
 	xml = _clean_namespaces(xml)
 	
 	view_tree = etree.Element("nodes")
@@ -32,31 +32,12 @@ def _get_topo_view_xml(xml):
 	_clean_graph()
 
 	for n in m_nodes:
-		view_node = etree.SubElement(view_tree, "node")
-		view_node_id = etree.SubElement(view_node, "node-id")
-		view_node_id.text = str(libxml2.parseDoc(str(n)).xpathEval('/node/node-id/text()')[0])
-		if view_node_id.text[0:4] == "host":
-			view_node_ip = etree.SubElement(view_node, "ip")
-			view_node_ip.text = str(libxml2.parseDoc(str(n)).xpathEval('/node/addresses/ip/text()')[0])
-			_add_node(view_node_id.text, view_node_ip.text)
-
-			view_node_mac = etree.SubElement(view_node, "mac")
-			view_node_mac.text = str(libxml2.parseDoc(str(n)).xpathEval('/node/addresses/mac/text()')[0])
+		node_id = str(libxml2.parseDoc(str(n)).xpathEval('/node/node-id/text()')[0])
+		if node_id[0:4] == "host":
+			node_ip = str(libxml2.parseDoc(str(n)).xpathEval('/node/addresses/ip/text()')[0])
+			_add_node(node_id, node_ip)
 		else:
-			_add_node(view_node_id.text, "")
-
-		for l in m_links:
-			# Append to node links which id is in irst half (source) of  link id
-			if (str(libxml2.parseDoc(str(l)).xpathEval('/link/link-id/text()')[0]).split("/")[0]).find(view_node_id.text) != -1:
-				link = etree.SubElement(view_node, "link")
-				link_id = etree.SubElement(link, "link-id")
-				link_id.text = str(libxml2.parseDoc(str(l)).xpathEval('/link/link-id/text()')[0])
-				link_src = etree.SubElement(link, "source")
-				link_src.text = str(libxml2.parseDoc(str(l)).xpathEval('/link/source/source-tp/text()')[0])
-				link_dst = etree.SubElement(link, "destination")
-				link_dst.text = str(libxml2.parseDoc(str(l)).xpathEval('/link/destination/dest-node/text()')[0])
-				link_dst_port = etree.SubElement(link, "destination-port")
-				link_dst_port.text = str(libxml2.parseDoc(str(l)).xpathEval('/link/destination/dest-tp/text()')[0])
+			_add_node(node_id, "")
 
 	for l in m_links:
 		aux = str(libxml2.parseDoc(str(l)).xpathEval('/link/link-id/text()')[0])
@@ -71,8 +52,7 @@ def _get_topo_view_xml(xml):
 	if not flows_ready:
 		_init_flows()
 		_init_flows_ports()
-		
-	return etree.tostring(view_tree)
+		enable_all()
 
 def _get_node_flows_view_xml(xml):
 	xml = _clean_namespaces(xml)
@@ -134,6 +114,14 @@ def _is_error(func, *args, **kw):
     except Exception:
         return True
 
+def _remove_duplicateds(links):
+	nodups= []
+	for i in range(len(links)-1):
+		if not (links[i][1],links[i][0]) in nodups:
+			nodups.append((links[i][0],links[i][1]))
+	return nodups
+
+
 def _get_flows_ids(xml):
 	xml = _clean_namespaces(xml)
 
@@ -182,8 +170,10 @@ def _set_node_port_mode(node_ref, port_ref, mode="enabled"):
 		node_flows[port_ref] = mode
 		if mode == "enabled":
 			service.enable_port(node_ref, port_ref)
+			print("Enabled " + node_ref + ":" + port_ref )
 		else:
 			service.disable_port(node_ref, port_ref)
+			print("Disabled " + node_ref + ":" + port_ref )
 	else:
 		print("Invalid port.")
 
@@ -214,8 +204,10 @@ def _show_flows_for_node(node_ref):
 
 def show_topo():
 	response = service.get_topo()
-	xml = _get_topo_view_xml(response[1]).decode('UTF-8')
-	view.show_info(xml, mode=response[0])
+	_retrieve_topology(response[1])
+	view.clean()
+	view.show_hosts(nodes)
+	view.show_links(_remove_duplicateds(links), nodes)
 
 def show_node_flows():
 	print("(Node id) ", end= '')
@@ -223,6 +215,7 @@ def show_node_flows():
 	_show_flows_for_node(node_id)
 
 def enable_all():
+	view.clean()
 	if nodes==[]:
 		print("No nodes detected. Have you 'shown network topology' ?")
 		back()
@@ -232,8 +225,10 @@ def enable_all():
 			for key,val in flows[node_ref].items():
 				if val == "disabled":
 					_set_node_port_mode(node_ref, key, "enabled")
+		print("All flows enabled")
 
 def block_all():
+	view.clean()
 	if nodes==[]:
 		print("No nodes detected. Have you 'shown network topology' ?")
 		back()
@@ -243,6 +238,7 @@ def block_all():
 			for key,val in flows[node_ref].items():
 				if val == "enabled":
 					_set_node_port_mode(node_ref, key, "disabled")
+		print("All flows disabled")
 
 def enable_port(node_ref=None, port_ref=None):
 	if nodes==[]:
@@ -250,6 +246,7 @@ def enable_port(node_ref=None, port_ref=None):
 		back()
 	else:
 		if node_ref == None:
+			view.clean()
 			print("(Node (switch) id) ", end='')
 			node_ref = input("> ")
 			try:
@@ -271,11 +268,13 @@ def enable_port(node_ref=None, port_ref=None):
 
 
 def block_port(node_ref=None, port_ref=None):
+
 	if nodes==[]:
 		print("No nodes detected. Have you 'shown network topology' ?")
 		back()
 	else:
 		if node_ref == None:
+			view.clean()
 			print("(Node (switch) id) ", end='')
 			node_ref = input("> ")
 			try:
@@ -292,12 +291,8 @@ def block_port(node_ref=None, port_ref=None):
 			except InvalidNodeId:
 				print("Invalid node id.")
 
-		
-
-
-
-
 def enable_path():
+	view.clean()
 	if nodes==[]:
 		print("No nodes detected. Have you 'shown network topology' ?")
 		back()
@@ -308,30 +303,27 @@ def enable_path():
 		node2_ref = input("> ")
 
 		path = _get_path(node1_ref, node2_ref)
-		print(path)
 		response = service.get_topo()
 		if response[0] == "ok":
 			xml = _clean_namespaces(response[1])
 			# Iterate over path.nodes (list of positions on nodes)
 			for i in range(len(path.nodes)-1):
-				print("enable one")
 				# path.nodes[i] is the position in nodes of the i-th node of the path
 				if _is_switch(nodes[path.nodes[i]][0]):
-					print("is switch")
 					port = _get_port_with(nodes[path.nodes[i]][0], nodes[path.nodes[i-1]][0], xml)
-					print(port)
 					enable_port(nodes[path.nodes[i]][0], port.split(":")[-1])
 					port = _get_port_with(nodes[path.nodes[i]][0], nodes[path.nodes[i+1]][0], xml)
-					print(port)
 					enable_port(nodes[path.nodes[i]][0], port.split(":")[-1])
 
 		else:
 			print("Error! Could not retrieve needed topology.")
 ####
 def back():
+	view.clean()
 	raise GoBack()
 
 def close():
+	view.clean()
 	print("\nClosing application ...")
 	sys.exit(0)
 
@@ -360,16 +352,16 @@ def enable_block_loop():
 	while True:
 		try:
 			val = enable_block_menu()
-			#os.system("clear")
+			os.system("clear")
 			actions[int(val)]()
 		except KeyError as e:
-			#os.system("clear")
+			os.system("clear")
 			print("Error! Invalid option \"", val, "\"")
 		except GoBack:
 			break
 # Application menu
 def main_menu():
-	print("\n Main menu.")
+	print("\nMain menu.")
 	print("[0] Close application.")
 	print("[1] Show network topology.")
 	print("[2] Show flows for node.")
@@ -388,10 +380,10 @@ def main_loop():
 	while True:
 		try:
 			val = main_menu()
-			#os.system("clear")
+			view.clean()
 			actions[int(val)]()
 		except KeyError as e:
-			#os.system("clear")
+			view.clean()
 			print("Error! Invalid option \"", val, "\"")
 
 

@@ -6,7 +6,6 @@ CREDENTIALS = HTTPBasicAuth('admin','admin')
 BLOCK_XML_PATH = 'static/rest/block_all.xml'
 
 def get_topo():
-	print("\nGet topo")
 	url = BASEURL + 'operational/network-topology:network-topology'
 	headers = {
 		'Accept': 'application/xml'
@@ -25,7 +24,6 @@ def get_topo():
 			return "bad",resp.text
 
 def enable_port(node_id, port_id):
-	print("\nEnable flow for "+ node_id)
 	url = BASEURL + 'config/opendaylight-inventory:nodes/node/' + node_id + '/table/0/flow/' + str(port_id)
 	headers = {
 		'Content-Type': 'application/xml'
@@ -51,7 +49,6 @@ def enable_port(node_id, port_id):
 			return "bad",resp.text
 
 def get_all_for(node_ref):
-	print("\nGet all for " + node_ref)
 	url = BASEURL + "operational/opendaylight-inventory:nodes/node/"+ node_ref +"/"
 	headers = {
 			'Accept': 'application/xml'
@@ -70,7 +67,6 @@ def get_all_for(node_ref):
 			return "bad",resp.text
 
 def disable_port(node_ref, node_port):
-	print("\n block port for " + node_ref)
 	url = BASEURL + "config/opendaylight-inventory:nodes/node/"+ node_ref +"/table/0/flow/" + str(node_port)
 	headers = {
 		'Content-Type': 'application/xml'
