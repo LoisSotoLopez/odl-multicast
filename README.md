@@ -18,7 +18,13 @@ Since no method for the user to configure the URL for the REST API to use is pro
 
 The following dependencies are required for the application to run.
  - lxml
+	 - `sudo apt-get install python3-lxml`
  - libxml2
+	 - 	 `sudo apt-get install python3-libxml2`
+ - Dijkstar
+	 1. `sudo apt install python3-pip`
+	 2. `pip3 install Dijkstar`
+ 
 
 ### Clone repository
 Clone this project to the machine running your controller, preferably to the habitual user home directory
