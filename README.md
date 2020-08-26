@@ -9,6 +9,10 @@ The final purpose of *odl-multicast* is to serve as a tool for the study of mult
 Accessible via a CLI menu, the following functionalities are provided:
  - Show network topology.
  - Show flows for a node to specify.
+ - Enable/Block flows.
+	 - Enable/block all flows in the topology.
+	 - Enable/block flows in a switch port.
+	 - Enable switch ports in a path between two end hosts.
 
 ## Installation
 ### Set up environment
